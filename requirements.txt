@@ -1,0 +1,11 @@
+opencv-python
+tensorflow-macos
+pandas
+numpy
+seaborn
+matplotlib
+keras
+sklearn
+scikit-learn
+scipy
+tensorflow_hub
