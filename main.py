@@ -13,6 +13,17 @@ cap = cv2.VideoCapture(0)
 width = 512
 height = 512
 
+def getBlobFromImage(img):
+    scale = 1 / 127.5
+    input_blob = cv2.dnn.blobFromImage(
+        image=img,
+        scalefactor=scale,
+        size=(48, 48),
+        mean=[0,0,0],
+        swapRB=False,
+        crop=False
+    )
+    return input_blob
 
 # [10-, 10-18, 19-30, 31-60, 60+]
 def getInterval(age):
@@ -27,7 +38,7 @@ def getInterval(age):
     else:
         return "+60"
 
-genderLabels = ['Female', 'Male']
+genderLabels = ['Male', 'Female']
 while(True):
     ret, frame = cap.read()
     
@@ -43,8 +54,33 @@ while(True):
         rectangle = cv2.rectangle(frame, (x, y), (x+w, y+h), 
                     (0, 0, 255), 2)
         faces = frame[y:y + h, x:x + w]
+        faces = cv2.cvtColor(faces, cv2.COLOR_BGR2GRAY)
+        #cv2.imwrite('image2.jpg', faces)
+        input_img = faces.astype(np.float32)
+        input_blob = getBlobFromImage(input_img)
+        ageNet.setInput(input_blob)
+        age = ageNet.forward()
+        print(age)
+        age = age[0][0] 
+        age = round(age)
+        genderNet.setInput(input_blob)
+        gender = genderNet.forward()
+        result = f'Age: {getInterval(age)} gender: {genderLabels[round(gender[0][0])]}'
+
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        cv2.putText(rectangle, result,(x, y - 10), font, 2, (255,0,0), 4, cv2.LINE_AA)
+    
+    cv2.imshow('Age and face recognition', frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+    '''
+                rectangle = cv2.rectangle(frame, (x, y), (x+w, y+h), 
+                    (0, 0, 255), 2)
+        faces = frame[y:y + h, x:x + w]
 
         faces = cv2.cvtColor(faces, cv2.COLOR_BGR2GRAY)
+        cv2.imwrite('image2.jpg', faces)
         input_img = faces.astype(np.float32)
         mean = np.array([1.0, 1.0, 1.0])
         scale = 1
@@ -52,12 +88,13 @@ while(True):
             image=input_img,
             scalefactor=scale,
             size=(48, 48),  # img target size
-            mean=mean,
+            mean=[104,117,123],
             swapRB=False,  # BGR -> RGB
             crop=False  # center crop
         )
         ageNet.setInput(input_blob)
         age = ageNet.forward()
+        print(age)
         age = age[0][0] / 100 
         age = getInterval(round(age)) 
 
@@ -68,9 +105,11 @@ while(True):
         font = cv2.FONT_HERSHEY_SIMPLEX
         cv2.putText(rectangle, result,(x, y - 10), font, 3, (255,0,0), 5, cv2.LINE_AA)
     
-    cv2.imshow('black and white', frame)
+    cv2.imshow('Age and face recognition', frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
+    '''
 
 # When everything done, release the capture
 cap.release()
