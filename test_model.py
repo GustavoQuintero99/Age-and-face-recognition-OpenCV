@@ -1,8 +1,13 @@
-import cv2
-import numpy as np
-import pandas as pd
-import tensorflow as tf
 import matplotlib.pyplot as plt
+import tensorflow as tf
+import pandas as pd
+import numpy as np
+import cv2
+
+
+'''
+This file can be used to test individual images to readjust model paramets or tensor generation
+'''
 
 def showImage(img):
     cv2.imshow('image',img)
