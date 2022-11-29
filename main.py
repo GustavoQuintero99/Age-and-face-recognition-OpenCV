@@ -1,116 +1,108 @@
 import tensorflow_hub as hub
-import cv2
-import numpy as np
+from tensorflow import keras
 import tensorflow as tf
 import pandas as pd
-from tensorflow import keras
+import numpy as np
+import cv2
 
-ageNet = cv2.dnn.readNetFromTensorflow('./frozen_models/frozen_age_model.pb')  
-genderNet = cv2.dnn.readNetFromTensorflow('./frozen_models/frozen_gender_model.pb')
+class CameraTensor:
+    def __init__(self, age_model_path, genderModelPath):
+        self.age_model_path = age_model_path
+        self.gender_model_path = genderModelPath
+        self.gender_labels = ['Male', 'Female']
 
-cap = cv2.VideoCapture(0)
+        self.cnn_age_model = None
+        self.cnn_gender_model = None
 
-width = 512
-height = 512
+    def load_models(self):
+        self.cnn_age_model = cv2.dnn.readNetFromTensorflow(self.age_model_path)  
+        self.cnn_gender_model = cv2.dnn.readNetFromTensorflow(self.gender_model_path)
 
-def getBlobFromImage(img):
-    scale = 1 / 127.5
-    input_blob = cv2.dnn.blobFromImage(
-        image=img,
-        scalefactor=scale,
-        size=(48, 48),
-        mean=[0,0,0],
-        swapRB=False,
-        crop=False
-    )
-    return input_blob
-
-# [10-, 10-18, 19-30, 31-60, 60+]
-def getInterval(age):
-    if age <= 10:
-        return "-10"
-    elif age >= 11 and age <= 18:
-        return "10 - 18"
-    elif age >= 19 and age <= 30:
-        return "19 - 30"
-    elif age >= 31 and age <= 60:
-        return "30 - 60"
-    else:
-        return "+60"
-
-genderLabels = ['Male', 'Female']
-while(True):
-    ret, frame = cap.read()
-    
-    # Convert into grayscale
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + './haarcascade_frontalface_alt2.xml')
-    
-    # Detect faces
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-
-    for (x, y, w, h) in faces:
-        rectangle = cv2.rectangle(frame, (x, y), (x+w, y+h), 
-                    (0, 0, 255), 2)
-        faces = frame[y:y + h, x:x + w]
-        faces = cv2.cvtColor(faces, cv2.COLOR_BGR2GRAY)
-        #cv2.imwrite('image2.jpg', faces)
-        input_img = faces.astype(np.float32)
-        input_blob = getBlobFromImage(input_img)
-        ageNet.setInput(input_blob)
-        age = ageNet.forward()
-        print(age)
-        age = age[0][0] 
-        age = round(age)
-        genderNet.setInput(input_blob)
-        gender = genderNet.forward()
-        result = f'Age: {getInterval(age)} gender: {genderLabels[round(gender[0][0])]}'
-
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(rectangle, result,(x, y - 10), font, 2, (255,0,0), 4, cv2.LINE_AA)
-    
-    cv2.imshow('Age and face recognition', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-    '''
-                rectangle = cv2.rectangle(frame, (x, y), (x+w, y+h), 
-                    (0, 0, 255), 2)
-        faces = frame[y:y + h, x:x + w]
-
-        faces = cv2.cvtColor(faces, cv2.COLOR_BGR2GRAY)
-        cv2.imwrite('image2.jpg', faces)
-        input_img = faces.astype(np.float32)
-        mean = np.array([1.0, 1.0, 1.0])
-        scale = 1
+    def get_blob_from_image(self, img):
+        scale = 1 / 127.5
         input_blob = cv2.dnn.blobFromImage(
-            image=input_img,
+            image=img,
             scalefactor=scale,
-            size=(48, 48),  # img target size
-            mean=[104,117,123],
-            swapRB=False,  # BGR -> RGB
-            crop=False  # center crop
+            size=(48, 48),
+            mean=[0,0,0],
+            swapRB=False,
+            crop=False
         )
-        ageNet.setInput(input_blob)
-        age = ageNet.forward()
-        print(age)
-        age = age[0][0] / 100 
-        age = getInterval(round(age)) 
+        return input_blob
 
-        genderNet.setInput(input_blob)
-        gender = genderNet.forward()
-        result = f'Age: {age} gender: {genderLabels[round(gender[0][0])]}'
+    def get_age_interval(self, age):
+        if age <= 10:
+            return "Menos de 10"
+        elif age >= 11 and age <= 18:
+            return "10 a 17"
+        elif age >= 19 and age <= 30:
+            return "19 a 30"
+        elif age >= 31 and age <= 50:
+            return "30 a 50"
+        elif age >= 51 and age <= 65:
+            return "51 a 65"
+        else:
+            return "Mas de 65"
 
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(rectangle, result,(x, y - 10), font, 3, (255,0,0), 5, cv2.LINE_AA)
+    def run(self):
+        if self.cnn_gender_model is None or self.cnn_age_model is None:
+            raise Exception("Please init the models beofre running the program")
+            
+        cap = cv2.VideoCapture(0)  
+        while(True):
+            ret, frame = cap.read()
+            
+            # Convert into grayscale
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + './haarcascade_frontalface_alt2.xml')
+            
+            # Detect faces
+            faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+            for (x, y, w, h) in faces:
+                rectangle = cv2.rectangle(frame, (x, y), (x+w, y+h), 
+                            (0, 0, 255), 2)
+                faces = frame[y:y + h, x:x + w]
+                faces = cv2.cvtColor(faces, cv2.COLOR_BGR2GRAY)
+
+                #Save image to further tesitng or model adjustments
+                #cv2.imwrite('image2.jpg', faces)
+
+                input_img = faces.astype(np.float32)
+                input_blob = self.get_blob_from_image(input_img)
+
+                #Make age predicitions
+                self.cnn_age_model.setInput(input_blob)
+                age = self.cnn_age_model.forward()
+                age = age[0][0] 
+                age = round(age)
+
+                #Make gender predictions
+                self.cnn_gender_model.setInput(input_blob)
+                gender = self.cnn_gender_model.forward()
+
+                #Frame results on camera
+                result = f'Age: {self.get_age_interval(age)} gender: {self.gender_labels[round(gender[0][0])]}'
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                cv2.putText(rectangle, result,(x, y - 10), font, 2, (255,0,0), 4, cv2.LINE_AA)
+
+                #Print results on console
+                print(f'Current prediction: age({age}) gender({self.gender_labels[round(gender[0][0])]})')
+            cv2.imshow('Age and face recognition', frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        # When everything done, release the capture
+        cap.release()
+        cv2.destroyAllWindows()
+
     
-    cv2.imshow('Age and face recognition', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+def init():
+    prog = CameraTensor('./frozen_models/frozen_age_model.pb', './frozen_models/frozen_gender_model.pb')
+    prog.load_models()
+    prog.run()
 
-    '''
+if __name__ == '__main__':
+    init()
 
-# When everything done, release the capture
-cap.release()
-cv2.destroyAllWindows()
+
+
