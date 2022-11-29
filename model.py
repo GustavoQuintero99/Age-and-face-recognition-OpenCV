@@ -14,7 +14,7 @@ from tensorflow.python.framework.convert_to_constants import convert_variables_t
 import os
 import warnings 
 
-epochs_for_training = 100
+epochs_for_training = 40
 
 class Model:
     def __init__(self):
