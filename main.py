@@ -32,17 +32,17 @@ class CameraTensor:
 
     def get_age_interval(self, age):
         if age <= 10:
-            return "Menos de 10"
-        elif age >= 11 and age <= 18:
-            return "10 a 17"
-        elif age >= 19 and age <= 30:
-            return "19 a 30"
+            return "Less than 10"
+        elif age >= 11 and age <= 17:
+            return "11 to 17"
+        elif age >= 18 and age <= 30:
+            return "18 to 30"
         elif age >= 31 and age <= 50:
-            return "30 a 50"
+            return "31 to 50"
         elif age >= 51 and age <= 65:
-            return "51 a 65"
+            return "51 to 65"
         else:
-            return "Mas de 65"
+            return "More than 65"
 
     def run(self):
         if self.cnn_gender_model is None or self.cnn_age_model is None:
